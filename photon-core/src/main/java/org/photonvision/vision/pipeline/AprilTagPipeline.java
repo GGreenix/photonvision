@@ -57,8 +57,14 @@ import org.opencv.core.Rect;
  
  public class AprilTagPipeline extends CVPipeline<CVPipelineResult, AprilTagPipelineSettings> {
      private final CropPipe staticCropPipe = new CropPipe();
-     
- 
+     double initX = 0;
+     double initY = 0;
+     double prevX = 0;
+     double prevY = 0;
+     double tempX = 0;
+     double tempY = 0;
+
+    boolean isTages = false;
      private final AprilTagDetectionPipe aprilTagDetectionPipe = new AprilTagDetectionPipe();
      private final AprilTagPoseEstimatorPipe singleTagPoseEstimatorPipe =
              new AprilTagPoseEstimatorPipe();
@@ -83,7 +89,7 @@ import org.opencv.core.Rect;
          
  
          staticCropPipe.setParams(staticCrop);
-         staticCropPipe.setDynamicRect(settings.getDynamicCrop());
+        //  staticCropPipe.setDynamicRect(settings.getDynamicCrop());
          
          // Sanitize thread count - not supported to have fewer than 1 threads
          settings.threads = Math.max(1, settings.threads);
@@ -136,9 +142,8 @@ import org.opencv.core.Rect;
              // We asked for a GREYSCALE frame, but didn't get one -- best we can do is give up
              return new CVPipelineResult(frame.sequenceID, 0, 0, List.of(), frame);
          }
-         staticCropPipe.setDynamicRect(settings.getDynamicCrop());
          CVPipeResult<CVMat> croppedFrame = staticCropPipe.run(frame.processedImage);
-        //  System.out.println("After cropping: " + croppedFrame.output.getMat().cols() + ", " + croppedFrame.output.getMat().rows());
+        
          sumPipeNanosElapsed += croppedFrame.nanosElapsed;
  
          CVPipeResult<List<AprilTagDetection>> tagDetectionPipeResult;
@@ -148,9 +153,58 @@ import org.opencv.core.Rect;
          List<AprilTagDetection> detections = tagDetectionPipeResult.output;
          List<AprilTagDetection> usedDetections = new ArrayList<>();
          List<TrackedTarget> targetList = new ArrayList<>();
-         
+         if (detections.size() > 0){
+            Rect newRect;
+            if(!isTages){
+                initX = detections.get(0).getCornerX(3);
+                initY = detections.get(0).getCornerY(3);
+                tempX = detections.get(0).getCornerX(3);
+                tempY = detections.get(0).getCornerY(3);
+                newRect  = new Rect(
+                    new Point(
+                        initX - 100 ,
+                        initY - 100 
+                        ),    
+                    new Point(
+                        initX  + 500,
+                        initY  + 500
+                    )
+                );
+                System.out.println("INITTAGGING");
+            }
+            else{
+            
+            tempX += (detections.get(0).getCornerX(3) - prevX);
+            tempY += (detections.get(0).getCornerY(3) - prevY);
+                newRect  = new Rect(
+                    new Point(
+                        tempX  ,
+                        tempY  
+                        ),    
+                    new Point(
+                        tempX + 400,
+                        tempY + 400
+                    )
+                );
+
+                
+            }
+            isTages = true;
+            
+            System.out.println("Last Point: (" + tempX + ", " + tempY + ")");
+            System.out.println("New RECT: (" + newRect.x + ", " + newRect.y + ")");
+            
+                prevX = detections.get(0).getCornerX(3);
+                prevY = detections.get(0).getCornerY(3);
+            staticCropPipe.setDynamicRect(newRect);
+            settings.setDynamicCrop(newRect);
+         }
+         else{            
+            isTages = false;
+         }
          // Filter out detections based on pipeline settings
          for (AprilTagDetection detection : detections) {
+
              // TODO this should be in a pipe, not in the top level here (Matt)
              if (detection.getDecisionMargin() < settings.decisionMargin) continue;
              if (detection.getHamming() > settings.hammingDist) continue;
@@ -166,7 +220,7 @@ import org.opencv.core.Rect;
                              null,
                              new TargetCalculationParameters(
                                      false, null, null, null, null, frameStaticProperties),
-                                     new Point(settings.getStaticCrop().x,settings.getStaticCrop().y));
+                                     new Point(staticCropPipe.getProccesor().x,staticCropPipe.getProccesor().y));
  
              targetList.add(target);
          }
@@ -225,7 +279,7 @@ import org.opencv.core.Rect;
                                  tagPoseEstimate,
                                  new TargetCalculationParameters(
                                          false, null, null, null, null, frameStaticProperties),
-                                         new Point(settings.getStaticCrop().x,settings.getStaticCrop().y)
+                                         new Point(staticCropPipe.getProccesor().x,staticCropPipe.getProccesor().y)
                                          );
                 
  

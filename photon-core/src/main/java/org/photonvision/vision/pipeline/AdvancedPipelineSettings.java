@@ -141,6 +141,12 @@ import edu.wpi.first.networktables.NetworkTableEvent;
         
          return new Rect(dynamic_x, dynamic_y, dynamic_width, dynamic_height);
      }
+     public void setDynamicCrop(Rect newRect){
+        dynamic_x = newRect.x;
+        dynamic_y = newRect.y;
+        dynamic_width = newRect.width;
+        dynamic_height = newRect.height;
+     }
      private void setDynamicCrop(NetworkTableEvent entryNotification){
          long[] coords = (long[]) entryNotification.valueData.value.getIntegerArray();
          System.out.println("CHANGED");

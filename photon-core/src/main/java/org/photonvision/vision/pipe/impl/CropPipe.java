@@ -25,6 +25,7 @@ import org.photonvision.vision.pipe.CVPipe;
 
 public class CropPipe extends CVPipe<CVMat, CVMat, Rect> {
     public Rect dynamiRect;
+    public Rect proccesor;
     
     public CropPipe() {
         Rect full_screen = new Rect(0, 0, Integer.MAX_VALUE, Integer.MAX_VALUE);
@@ -39,7 +40,7 @@ public class CropPipe extends CVPipe<CVMat, CVMat, Rect> {
         // if (fullyCovers(params, mat)) {
         //     return in;
         // }
-        Rect proccesor = false ? this.params : dynamiRect;
+        proccesor = isDynamicInvalid() ? this.params : dynamiRect;
 
         int x = MathUtil.clamp(proccesor.x, 0, mat.width());
         int y = MathUtil.clamp(proccesor.y, 0, mat.height());
@@ -50,6 +51,9 @@ public class CropPipe extends CVPipe<CVMat, CVMat, Rect> {
     }
     public void setDynamicRect(Rect newDynamicCropp){
         dynamiRect = newDynamicCropp;
+    }
+    public Rect getProccesor(){
+        return proccesor;
     }
     /**
      * Returns true if the given rectangle fully covers some given image.

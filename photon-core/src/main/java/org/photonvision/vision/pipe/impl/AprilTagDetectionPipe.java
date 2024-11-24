@@ -73,4 +73,3 @@
          m_detector = null;
      }
  }
- 
